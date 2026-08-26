@@ -1,20 +1,26 @@
 
-import React, { Component, useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { Redirect } from 'react-router-dom'
 
 import firebase from 'firebase'
+import { signInWithEmailAndPassword, isAuthenticated } from '../services/authService'
 
 
 export default function Login() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('')
+    const [error, setError] = useState('')
 
-    const onSignIn = () => {
-        firebase.auth().signInWithEmailAndPassword(email, password).catch(function (error) {
-        });
+    const onSignIn = async () => {
+        try {
+            setError('');
+            await signInWithEmailAndPassword(email, password);
+        } catch (error) {
+            setError(error.message);
+        }
     }
 
-    if (firebase.auth().currentUser == undefined) {
+    if (!isAuthenticated()) {
         return (
 
             <div className="container vertical-center ">
