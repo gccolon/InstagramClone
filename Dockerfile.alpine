@@ -1,0 +1,19 @@
+# Dockerfile for Alpine Linux with bash
+FROM alpine:latest
+
+# Update package index and install bash
+RUN apk update && \
+    apk add --no-cache bash sudo
+
+# Create a non-root user
+RUN adduser -D -s /bin/bash appuser && \
+    echo "appuser ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+
+# Switch to non-root user
+USER appuser
+WORKDIR /home/appuser
+
+# Set bash as the default shell
+SHELL ["/bin/bash", "-c"]
+
+CMD ["/bin/bash"]
