@@ -1,6 +1,6 @@
 import { FontAwesome5 } from '@expo/vector-icons';
 import firebase from 'firebase';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, Image, Text, TouchableOpacity, View } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { connect } from 'react-redux';
@@ -18,44 +18,58 @@ function Profile(props) {
     const [loading, setLoading] = useState(true);
     const [following, setFollowing] = useState(false)
 
+    const isOwnProfile = useMemo(() => 
+        props.route.params.uid === firebase.auth().currentUser.uid,
+        [props.route.params.uid]
+    );
+
     useEffect(() => {
         const { currentUser, posts } = props;
 
-        if (props.route.params.uid === firebase.auth().currentUser.uid) {
+        if (isOwnProfile) {
             setUser(currentUser)
             setUserPosts(posts)
             setLoading(false)
         }
         else {
-            firebase.firestore()
-                .collection("users")
-                .doc(props.route.params.uid)
-                .get()
-                .then((snapshot) => {
-                    if (snapshot.exists) {
+            // Fetch other user's data
+            const fetchUserData = async () => {
+                try {
+                    const userSnapshot = await firebase.firestore()
+                        .collection("users")
+                        .doc(props.route.params.uid)
+                        .get();
+                    
+                    if (userSnapshot.exists) {
                         props.navigation.setOptions({
-                            title: snapshot.data().username,
+                            title: userSnapshot.data().username,
                         })
 
-                        setUser({ uid: props.route.params.uid, ...snapshot.data() });
+                        setUser({ uid: props.route.params.uid, ...userSnapshot.data() });
                     }
-                    setLoading(false)
 
-                })
-            firebase.firestore()
-                .collection("posts")
-                .doc(props.route.params.uid)
-                .collection("userPosts")
-                .orderBy("creation", "desc")
-                .get()
-                .then((snapshot) => {
-                    let posts = snapshot.docs.map(doc => {
+                    const postsSnapshot = await firebase.firestore()
+                        .collection("posts")
+                        .doc(props.route.params.uid)
+                        .collection("userPosts")
+                        .orderBy("creation", "desc")
+                        .limit(30) // Add pagination limit
+                        .get();
+                    
+                    let posts = postsSnapshot.docs.map(doc => {
                         const data = doc.data();
                         const id = doc.id;
                         return { id, ...data }
                     })
                     setUserPosts(posts)
-                })
+                } catch (error) {
+                    console.error('Error fetching profile data:', error);
+                } finally {
+                    setLoading(false)
+                }
+            };
+
+            fetchUserData();
         }
 
 
@@ -65,9 +79,9 @@ function Profile(props) {
             setFollowing(false);
         }
 
-    }, [props.route.params.uid, props.following, props.currentUser, props.posts])
+    }, [props.route.params.uid, props.following, props.currentUser, props.posts, isOwnProfile])
 
-    const onFollow = () => {
+    const onFollow = useCallback(() => {
         firebase.firestore()
             .collection("following")
             .doc(firebase.auth().currentUser.uid)
@@ -76,15 +90,46 @@ function Profile(props) {
             .set({})
 
         props.sendNotification(user.notificationToken, "New Follower", `${props.currentUser.name} Started following you`, { type: 'profile', user: firebase.auth().currentUser.uid })
-    }
-    const onUnfollow = () => {
+    }, [user, props.currentUser, props.route.params.uid]);
+
+    const onUnfollow = useCallback(() => {
         firebase.firestore()
             .collection("following")
             .doc(firebase.auth().currentUser.uid)
             .collection("userFollowing")
             .doc(props.route.params.uid)
             .delete()
-    }
+    }, [props.route.params.uid]);
+
+    // Memoize keyExtractor for better performance
+    const keyExtractor = useCallback((item, index) => {
+        return item.id || index.toString();
+    }, []);
+
+    // Memoize renderItem for better performance
+    const renderItem = useCallback(({ item }) => (
+        <TouchableOpacity
+            style={[container.containerImage, utils.borderWhite]}
+            onPress={() => props.navigation.navigate("Post", { item, user })}>
+
+            {item.type == 0 ?
+
+                <CachedImage
+                    cacheKey={item.id}
+                    style={container.image}
+                    source={{ uri: item.downloadURLStill }}
+                />
+
+                :
+
+                <CachedImage
+                    cacheKey={item.id}
+                    style={container.image}
+                    source={{ uri: item.downloadURL }}
+                />
+            }
+        </TouchableOpacity>
+    ), [user, props.navigation]);
 
     if (loading) {
         return (
@@ -149,13 +194,13 @@ function Profile(props) {
                     <Text style={text.bold}>{user.name}</Text>
                     <Text style={[text.profileDescription, utils.marginBottom]}>{user.description}</Text>
 
-                    {props.route.params.uid !== firebase.auth().currentUser.uid ? (
+                    {!isOwnProfile ? (
                         <View style={[container.horizontal]}>
                             {following ? (
                                 <TouchableOpacity
                                     style={[utils.buttonOutlined, container.container, utils.margin15Right]}
                                     title="Following"
-                                    onPress={() => onUnfollow()}>
+                                    onPress={onUnfollow}>
                                     <Text style={[text.bold, text.center, text.green]}>Following</Text>
                                 </TouchableOpacity>
                             )
@@ -164,7 +209,7 @@ function Profile(props) {
                                     <TouchableOpacity
                                         style={[utils.buttonOutlined, container.container, utils.margin15Right]}
                                         title="Follow"
-                                        onPress={() => onFollow()}>
+                                        onPress={onFollow}>
                                         <Text style={[text.bold, text.center, { color: '#2196F3' }]}>Follow</Text>
                                     </TouchableOpacity>
 
@@ -191,32 +236,12 @@ function Profile(props) {
                     numColumns={3}
                     horizontal={false}
                     data={userPosts}
-                    style={{}}
-                    renderItem={({ item }) => (
-                        <TouchableOpacity
-                            style={[container.containerImage, utils.borderWhite]}
-                            onPress={() => props.navigation.navigate("Post", { item, user })}>
-
-                            {item.type == 0 ?
-
-                                <CachedImage
-                                    cacheKey={item.id}
-                                    style={container.image}
-                                    source={{ uri: item.downloadURLStill }}
-                                />
-
-                                :
-
-                                <CachedImage
-                                    cacheKey={item.id}
-                                    style={container.image}
-                                    source={{ uri: item.downloadURL }}
-                                />
-                            }
-                        </TouchableOpacity>
-
-                    )}
-
+                    keyExtractor={keyExtractor}
+                    renderItem={renderItem}
+                    removeClippedSubviews={true}
+                    maxToRenderPerBatch={9}
+                    windowSize={5}
+                    initialNumToRender={9}
                 />
             </View>
         </ScrollView >

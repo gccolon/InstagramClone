@@ -1,5 +1,5 @@
 import firebase from 'firebase'
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { FlatList, RefreshControl, Text, View } from 'react-native'
 import BottomSheet from 'react-native-bottomsheet-reanimated'
 import { TouchableOpacity } from 'react-native-gesture-handler'
@@ -22,17 +22,18 @@ function Feed(props) {
 
     useEffect(() => {
         if (props.usersFollowingLoaded == props.following.length && props.following.length !== 0) {
-            props.feed.sort(function (x, y) {
+            // Sort posts by creation date (newest first)
+            const sortedFeed = [...props.feed].sort((x, y) => {
                 return y.creation.toDate() - x.creation.toDate();
-            })
+            });
 
-            setPosts(props.feed);
+            setPosts(sortedFeed);
             setRefreshing(false)
-            for (let i = 0; i < props.feed.length; i++) {
-                if (props.feed[i].type == 0) {
-                    setUnmutted(i)
-                    return;
-                }
+            
+            // Find first video post to unmute
+            const firstVideoIndex = sortedFeed.findIndex(post => post.type == 0);
+            if (firstVideoIndex !== -1) {
+                setUnmutted(firstVideoIndex);
             }
         }
         props.navigation.setParams({ param: "value" })
@@ -45,8 +46,35 @@ function Feed(props) {
         }
     })
 
+    // Memoize keyExtractor for better performance
+    const keyExtractor = useCallback((item, index) => {
+        return item.id ? `${item.id}-${index}` : index.toString();
+    }, []);
 
+    // Memoize renderItem for better performance
+    const renderItem = useCallback(({ item, index }) => (
+        <Post 
+            route={{ 
+                params: { 
+                    user: item.user, 
+                    item, 
+                    index, 
+                    unmutted, 
+                    inViewPort, 
+                    setUnmuttedMain: setUnmutted, 
+                    setModalShow, 
+                    feed: true 
+                } 
+            }} 
+            navigation={props.navigation} 
+        />
+    ), [unmutted, inViewPort, props.navigation]);
 
+    // Memoize onRefresh callback
+    const onRefresh = useCallback(() => {
+        setRefreshing(true);
+        props.reload();
+    }, [props.reload]);
 
     if (posts.length == 0) {
         return (<View />)
@@ -59,6 +87,7 @@ function Feed(props) {
             sheetRef.snapTo(1)
         }
     }
+    
     return (
         <View style={[container.container, utils.backgroundWhite]}>
 
@@ -66,10 +95,7 @@ function Feed(props) {
                 refreshControl={
                     <RefreshControl
                         refreshing={refreshing}
-                        onRefresh={() => {
-                            setRefreshing(true);
-                            props.reload()
-                        }}
+                        onRefresh={onRefresh}
                     />
                 }
                 onViewableItemsChanged={onViewableItemsChanged.current}
@@ -80,13 +106,12 @@ function Feed(props) {
                 numColumns={1}
                 horizontal={false}
                 data={posts}
-                keyExtractor={(item, index) => index.toString()}
-
-                renderItem={({ item, index }) => (
-                    <View key={index}>
-                        <Post route={{ params: { user: item.user, item, index, unmutted, inViewPort, setUnmuttedMain: setUnmutted, setModalShow, feed: true } }} navigation={props.navigation} />
-                    </View>
-                )}
+                keyExtractor={keyExtractor}
+                renderItem={renderItem}
+                removeClippedSubviews={true} // Optimize memory usage
+                maxToRenderPerBatch={5} // Reduce initial render batch
+                windowSize={10} // Reduce number of items kept in memory
+                initialNumToRender={5} // Reduce initial render count
             />
 
             <BottomSheet
