@@ -44,6 +44,16 @@
         <li><a href="#installation">Installation</a></li>
       </ul>
     </li>
+    <li>
+      <a href="#-how-to-run-locally">How to Run Locally</a>
+      <ul>
+        <li><a href="#prerequisites-1">Prerequisites</a></li>
+        <li><a href="#setup-firebase-configuration">Setup Firebase Configuration</a></li>
+        <li><a href="#running-the-frontend-react-native-with-expo">Running the Frontend</a></li>
+        <li><a href="#running-the-admin-panel-react-web-app">Running the Admin Panel</a></li>
+        <li><a href="#deploying-the-backend-firebase-cloud-functions">Deploying the Backend</a></li>
+      </ul>
+    </li>
     <li><a href="#roadmap">Roadmap</a></li>
     <li><a href="#contributing">Contributing</a></li>
     <li><a href="#support">Support</a></li>
@@ -81,6 +91,100 @@ You can follow the youtube series in the following [link](https://www.youtube.co
 - ### **Installation**
 
   In order to deploy the project you'll need to follow the [wiki page](https://github.com/SimCoderYoutube/InstagramClone/wiki/Setup-your-project) dedicated to this effect.
+
+## 🏃 How to Run Locally
+
+This project consists of three main parts: the React Native frontend, the React admin panel, and the Firebase backend. Follow the steps below to run each part locally.
+
+### Prerequisites
+
+Before you begin, ensure you have the following installed:
+- [Node.js](https://nodejs.org/) (v12 or higher)
+- [npm](https://www.npmjs.com/) or [yarn](https://yarnpkg.com/)
+- [Expo CLI](https://docs.expo.dev/get-started/installation/) (for running the mobile app)
+- [Firebase CLI](https://firebase.google.com/docs/cli) (for backend deployment)
+- A [Firebase project](https://firebase.google.com/) with Firestore, Authentication, and Storage enabled
+
+### Setup Firebase Configuration
+
+1. Create a Firebase project at [firebase.google.com](https://firebase.google.com/)
+2. Enable the following services:
+   - Authentication (Email/Password)
+   - Firestore Database
+   - Cloud Storage
+3. Get your Firebase configuration credentials
+4. Update the Firebase config in the frontend and admin applications with your credentials
+
+### Running the Frontend (React Native with Expo)
+
+1. Navigate to the frontend directory:
+   ```bash
+   cd frontend
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Start the Expo development server:
+   ```bash
+   npm start
+   ```
+
+4. Choose how to run the app:
+   - **Android**: Press `a` to open in Android emulator
+   - **iOS**: Press `i` to open in iOS simulator (macOS only)
+   - **Web**: Press `w` to open in web browser
+
+### Running the Admin Panel (React Web App)
+
+1. Navigate to the admin directory:
+   ```bash
+   cd admin
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Start the development server:
+   ```bash
+   npm start
+   ```
+
+4. The admin panel will open at `http://localhost:3000`
+
+### Deploying the Backend (Firebase Cloud Functions)
+
+1. Navigate to the backend functions directory:
+   ```bash
+   cd backend/functions
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Login to Firebase:
+   ```bash
+   firebase login
+   ```
+
+4. Deploy the functions:
+   ```bash
+   firebase deploy --only functions
+   ```
+
+### Firestore and Storage Rules
+
+The project includes Firestore and Storage security rules:
+- `firestore_rules.txt` - Contains Firestore security rules
+- `storage_rules.txt` - Contains Cloud Storage security rules
+
+Apply these rules in your Firebase Console under the respective sections.
 
 ## 🚧 Roadmap
 
