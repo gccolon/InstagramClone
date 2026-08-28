@@ -15,7 +15,12 @@ exports.addLike = functions.firestore.document('/posts/{creatorId}/userPosts/{po
             .update({
                 likesCount: admin.firestore.FieldValue.increment(1)
             })
+            .catch((error) => {
+                console.error('Error incrementing likes count:', error);
+                return null;
+            });
     });
+
 exports.removeLike = functions.firestore.document('/posts/{creatorId}/userPosts/{postId}/likes/{userId}')
     .onDelete((snap, context) => {
         return db
@@ -26,6 +31,10 @@ exports.removeLike = functions.firestore.document('/posts/{creatorId}/userPosts/
             .update({
                 likesCount: admin.firestore.FieldValue.increment(-1)
             })
+            .catch((error) => {
+                console.error('Error decrementing likes count:', error);
+                return null;
+            });
     })
 
 
@@ -44,6 +53,10 @@ exports.addFollower = functions.firestore.document('/following/{userId}/userFoll
                         followingCount: admin.firestore.FieldValue.increment(1)
                     })
             })
+            .catch((error) => {
+                console.error('Error updating follower counts:', error);
+                return null;
+            });
     })
 
 exports.removeFollower = functions.firestore.document('/following/{userId}/userFollowing/{FollowingId}')
@@ -61,6 +74,10 @@ exports.removeFollower = functions.firestore.document('/following/{userId}/userF
                         followingCount: admin.firestore.FieldValue.increment(-1)
                     })
             })
+            .catch((error) => {
+                console.error('Error updating follower counts:', error);
+                return null;
+            });
     })
 
 exports.addComment = functions.firestore.document('/posts/{creatorId}/userPosts/{postId}/comments/{userId}')
@@ -73,4 +90,8 @@ exports.addComment = functions.firestore.document('/posts/{creatorId}/userPosts/
             .update({
                 commentsCount: admin.firestore.FieldValue.increment(1)
             })
+            .catch((error) => {
+                console.error('Error incrementing comments count:', error);
+                return null;
+            });
     })

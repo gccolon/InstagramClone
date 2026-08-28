@@ -1,16 +1,18 @@
 import * as FileSystem from 'expo-file-system'
 import PropTypes from 'prop-types'
 import React, { useEffect, useRef, useState } from 'react'
-import { Image } from 'react-native'
+import { ActivityIndicator, Image, View } from 'react-native'
 
 
 
 
 const CachedImage = props => {
-  const { source: { uri }, cacheKey } = props
+  const { source: { uri }, cacheKey, style } = props
   const filesystemURI = `${FileSystem.cacheDirectory}${cacheKey}`
 
   const [imgURI, setImgURI] = useState(filesystemURI)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
 
   const componentIsMounted = useRef(true)
 
@@ -23,6 +25,7 @@ const CachedImage = props => {
           // download to cache
           if (componentIsMounted.current) {
             setImgURI(null)
+            setLoading(true)
             await FileSystem.downloadAsync(
               uri,
               fileURI
@@ -32,8 +35,16 @@ const CachedImage = props => {
             setImgURI(fileURI)
           }
         }
+        if (componentIsMounted.current) {
+          setLoading(false)
+        }
       } catch (err) {
-        setImgURI(uri)
+        console.error('Error loading cached image:', err)
+        if (componentIsMounted.current) {
+          setImgURI(uri) // Fallback to original URI
+          setError(true)
+          setLoading(false)
+        }
       }
     }
 
@@ -42,7 +53,15 @@ const CachedImage = props => {
     return () => {
       componentIsMounted.current = false
     }
-  }, [])// eslint-disable-line react-hooks/exhaustive-deps
+  }, [uri, filesystemURI])// eslint-disable-line react-hooks/exhaustive-deps
+
+  if (loading && !imgURI) {
+    return (
+      <View style={[style, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#f0f0f0' }]}>
+        <ActivityIndicator size="small" color="#999" />
+      </View>
+    )
+  }
 
   return (
     <Image
@@ -50,6 +69,13 @@ const CachedImage = props => {
       {...props}
       source={{
         uri: imgURI,
+      }}
+      onLoadStart={() => setLoading(true)}
+      onLoadEnd={() => setLoading(false)}
+      onError={(e) => {
+        console.error('Image load error:', e.nativeEvent.error)
+        setError(true)
+        setLoading(false)
       }}
     />
   )
