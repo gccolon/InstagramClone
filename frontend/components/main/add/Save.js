@@ -193,7 +193,6 @@ function Save(props) {
                                 horizontal={true}
                                 MaxVisibleRowCount={3}
                             />
-                            <Text style={styles.characterCount}>{caption.length} characters</Text>
                         </View>
                         <View>
                             {props.route.params.type ?
@@ -269,12 +268,6 @@ const styles = StyleSheet.create({
     usernameText: {
         fontSize: 12,
         color: 'rgba(0,0,0,0.6)'
-    },
-    characterCount: {
-        fontSize: 12,
-        color: 'rgba(0,0,0,0.5)',
-        marginTop: 5,
-        textAlign: 'right'
     }
 });
 
